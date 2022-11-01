@@ -53,7 +53,3 @@ tags= {
     Name = "my_elastic_ip"
   }
 }
-Footer
-© 2022 GitHub, Inc.
-Footer navigation
-Terms
