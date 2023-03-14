@@ -1,0 +1,237 @@
+create 3 instances
+jenkins 
+ansible
+webapp
+
+connection : jenkins -- > ansible & webapp
+		 ansible -- > webapp
+
+setup jenkins
+free stype and repo give proj: one
+manage jenkins -- > plugins -- > public overssh
+
+manage jenkins -- > configuratiuon settings -- >
+SSH SERVERS -- > Add -- > 
+
+name & hostname & user & remote dir -- > advance -- > password -- > test config 
+now you will get sucess
+do it for all the nodes ansible & webapp
+
+check by doing firts build
+Jnekins server and check on var lib jenkins workpace
+
+build step -- > Send files or execute commands over SSH
+SSH Server -- > Name: Jenkins -- > exec command: rsync -avh /var/lib/jenkins/workspace/one/* root@172.31.47.223:/opt 
+save and apply
+do build 2 and it will success 
+goto ansible server and check opt
+
+
+go for job oen and config and ssh server on build steo and exec command
+
+cd /opt
+
+docker image build -t $JOB_NAME:v1.$BUILD_ID .
+docker image tag $JOB_NAME:v1.$BUILD_ID rahamshaik007/$JOB_NAME:v1.$BUILD_ID
+docker image tag $JOB_NAME:v1.$BUILD_ID rahamshaik007/$JOB_NAME:latest
+docker image push $JOB_NAME:v1.$BUILD_ID rahamshaik007/$JOB_NAME:v1.$BUILD_ID
+docker image push rahamshaik007/$JOB_NAME:latest
+
+docker image rmi $JOB_NAME:v1.$BUILD_ID rahamshaik007/$JOB_NAME:v1.$BUILD_ID rahamshaik007/$JOB_NAME:latest
+
+advanvce on top and click Verbose output in console
+
+docker file:
+
+FROM  amazonlinux:latest
+MAINTAINER vikashashoke@gmail.com
+RUN yum install httpd unzip -y 
+ADD https://www.free-css.com/assets/files/free-css-templates/download/page254/photogenic.zip /var/www/html/
+WORKDIR /var/www/html/
+RUN unzip photogenic.zip
+RUN cp -rvf photogenic/* .
+RUN rm -rf photogenic photogenic.zip
+CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
+EXPOSE 80
+
+ANSIBLE SERVER
+sudo amazon-linux-extras install ansible2 -y
+vim /etc/ansible/hosts 
+vim /etc/ansible/ansible.cfg 
+cd /opt/
+vim ansible.yml
+
+- hosts: webapp
+  tasks:
+   - name: create new container
+     shell: docker container run -itd --name mydockercontainer -p 9000:80 rahamshaik007/img1 
+
+jenkins job -- > build step -- > Send files or execute commands over SSH
+Ansible -- > exec command: ansible-playbook /opt/ansible.yml -- > save
+
+
+if u build it will fail because the conatiner name is varied 
+
+go to playbook and change container and give another name
+
+- hosts: webapp
+  tasks:
+   - name: stop container
+     shell: docker stop mydockercontainer
+   - name: removig container
+     shell: docker rm mydockercontainer
+     shell: docker stop mydockercontainer
+   - name: removing image
+     shell: docker rm -f rahamshaik007/img1
+   - name: create new container
+     shell: docker container run -itd --name mydockercontainer -p 9000:80 rahamshaik007/img1
+
+use webhook for this
+
+============================================================================================================================================================================================
+SAME PROJECT FOR WEBAPPLICATION:
+
+CREATE 3 INSTANCES (JENKINS, ANSIBLE, DOCKER)
+CHANGE ALL HOSTNAMES 
+INSTALL JAVA ON ALL OF THEM
+sudo amazon-linux-extras install java-openjdk11 -y
+vim /etc/ssh/sshd_config
+systemctl restart sshd
+systemctl status sshd
+
+
+ 
+
+GO TO JENKINS SERVER
+INSTALL JENKINS
+cd /opt
+wget https://dlcdn.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+tar -zxvf apache-maven-3.6.3-bin.tar.gz 
+mv apache-maven-3.6.3 maven
+vim ~/.bash_profile 
+#PATH=$PATH:$HOME/bin
+M2_HOME=/opt/maven
+M2=$M2_HOME/bin
+PATH=$PATH:$JAVA_HOME:$M2_HOME:$M2:$HOME/bin
+export PATH
+
+sudo su -
+echo $PATH
+echo $M2
+visudo
+
+DASHBOARD -- > MANAGE PLUGINS -- > MAVEN INTEGRATION & MAVEN INVOKER & PUBLISH OVER SSH -- > INSTALL
+
+MANAGE JENKINS -- > LOBAL CONFIGURATIN TOOL -- > MAVEN -- > ADD MAVEN -- > NAME: maven & MAVEN_HOME: /opt/maven
+
+
+GO TO ANSIBLE SERVER
+
+yum install python -y
+yum install python-pip -y
+pip install ansible 
+ansible --version
+mkdir /etc/ansible
+cd /etc/ansible
+vim hosts
+enter localhost and save 
+useradd ansadmin
+passwd ansadmin
+echo "ansadmin ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+yum install docker -y
+systemctl start docker
+systemctl status docker
+usermod -aG docker ansadmin 
+su - ansadmin
+cd /opt/
+sudo mkdir docker
+sudo chown -R ansadmin:ansadmin docker
+ssh-copy-id ansadmin@localhost
+ssh ansadmin@localhost
+yes
+ssh-copy-id root@172.31.93.8 (private ip of docker)
+ssh root@172.31.93.8 
+yes
+
+
+GO TO DOCKER SERVER
+yum install docker -y
+systemctl start docker
+systemctl status docker
+
+Dashboard -- > Manage Jenkins -- > Configure System
+ssh server -- > add -- > name: ansible server -- > hostname: private ip of ansible -- > Username:ansadmin
+Use password authentication, or use a different key : password -- > Test Configure -- > Apply & save
+
+GOT TO ANSIBLE SEREVER
+docker login 
+
+JOBS -- > ABC PROJECT -- > MAVEN PROJECT -- > 
+GIT : Repo url and Branch
+on host file we need to give docker private ip
+Build: Root POM: pom.xml -- > Goals ans Options: clean install package
+PostBuild Actions : Send build artifacts over SSH 
+Name: ansible -- > Source files: Dockerfile, hosts, create-simple-devops-image.yml, create-simple-devops-project.yml
+Remote directory: //opt/docker -- > apply & save
+go to ansible node and loginto ansadmin and under /opt/docker you will see files
+
+
+
+
+
+
+PostBuild Actions : Send build artifacts over SSH 
+Name: ansible -- > Source files: webapp/target/*.war -- > Remove prefix: webapp/target
+Remote directory: //opt/docker -- > Exec command:
+
+ansible-playbook -i /opt/docker/hosts /opt/docker/create-simple-devops-image.yml --limit localhost;
+ansible-playbook -i /opt/docker/hosts /opt/docker/create-simple-devops-project.yml --limit 172.31.93.8;
+
+apply & save
+
+
+
+Brfor build check docker images & containers docker and ansibe server
+
+FINAL OP:
+DOCKERPUBLICIP:8080/webapp
+
+FAILED:
+
+EXECUTE PLAYBOOKS MANUALLY CHECK THE TAG AND USERNAME OF THE IMAGE OF PLAYBOOK
+
+
+
+============================================================================================================================================================================================
+
+TERRAFOR PROJECT:
+
+Create 2 instnaces jenkins and mormal
+
+manage plugins -- > terraform -- > install
+manage jenkins -- > global tool config -- > Terraform -- > add Terraform
+if You want to install automatically
+Name : Terraform -- > Install from bintray.com : Terraform 1.1.3 linux (amd64)
+if You want to install manually
+untick the box -- > Install directory: /usr/local/bin -- > save
+
+
+Dashboard -- > Manage Jenkins  -- > Credentials  -- > System  -- > Global credentials (unrestricted)
+if you want to interact github withapi then we need to generate a token (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)
+kind: secret text -- > Secret: Give token  -- > ID : github_api -- > create 
+
+Manage Jenkins -- > Configure System -- >  GitHub -- > GitHub Server -- > Name: github_api -- > Credentials: github_api 
+Click on Manage hooks -- > Test Connection: Credentials verified for user RAHAMSHAIK007, rate limit: 4999 -- > save
+
+Now we have authenticated from this jenkins machine to github 
+Manage Jenkins  -- > Credentials -- > System -- > Global credentials (unrestricted) -- > Add credentials
+Kind: secret text -- > ID: AWS_ACCESS_KEY_ID -- > Secret: -- > save
+Kind: secret text -- > ID: AWS_SECRET_ACCESS_KEY -- > Secret: -- > save
+
+
+ 
+jobs -- > Name -- > Pipeline -- > Build triggers -- > GitHub hook trigger for GITScm polling -- > 
+Pipeline -- > Pipeline script from SCM -- > SCM: Git -- > Repo URL: https://github.com/RAHAMSHAIK007/terrarepo.git
+
+READ PIPELINE:
+Pipeline syntax -- > Declarative -- > sample Directive: Tool -- > Add: Terraform -- > Generate -- >
